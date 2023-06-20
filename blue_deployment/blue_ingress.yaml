@@ -68,7 +68,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  namespace: prod
+  namespace: blue
   name: ingress-2048
   annotations:
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:489994096722:certificate/d05d9767-a428-486c-9089-2bfb0fa5191b

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world-blue-deployment
-  namespace: prod
+  namespace: blue
   labels:
     app: "1.0.0"
 spec:
@@ -33,7 +33,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: prod  
+  namespace: blue  
   name: hello-world-blue-service
 spec:
   
