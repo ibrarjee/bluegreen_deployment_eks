@@ -2,8 +2,8 @@
 
 # Define the Kubernetes service name and AWS Route 53 hosted zone ID
 hosted_zone_id="Z074130239BXW7W2J0TY9"
-record_name="bluegreen.groveops.net"
-namespace="dev"
+record_name="testingbluegreen.groveops.net"
+namespace="green"
 ingress_name="ingress-2048"
 
 # Get the external IP address of the Kubernetes service
