@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name}}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{ include "blue_green_deployment.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+    {{- include "blue_green_deployment.selectorLabels" . | nindent 6}}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 33%
+  template:
+    metadata:
+      labels:
+        {{- include "blue_green_deployment.selectorLabels" . | nindent 8}}
+    spec:
+      containers: 
+        - name: {{ .Values.image.containers_name }}
+          image:  {{ .Values.image.repository }}
+          #jmbharathram/myapp:bgdemoapp.v1.0
+          ports:
+            - containerPort: {{ .Values.image.containerPort}}
+
