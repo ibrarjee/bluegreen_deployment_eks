@@ -1,0 +1,29 @@
+
+replicaCount: 2
+
+namespace: namespace
+
+image:
+  repository: Image
+  pullPolicy: IfNotPresent
+  containers_name : hello-world-blue
+  containerPort : 80
+  
+  # Overrides the image tag whose default is the chart appVersion.
+
+service:
+  type: ClusterIP
+  port: 80
+  name: hello-world-service
+  targetPort : 80
+  protocol : TCP
+  
+
+ingress: 
+  name : hello-from-ingress
+  # annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+
+#   enabled: false
+#   className: ""
