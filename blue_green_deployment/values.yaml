@@ -1,7 +1,7 @@
 
 replicaCount: 2
 
-namespace: green
+namespace: Namespace
 
 image:
   repository: Image
