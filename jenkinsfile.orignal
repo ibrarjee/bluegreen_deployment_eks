@@ -1,12 +1,12 @@
 pipeline {
     agent any
         environment {
-        AWS_ACCOUNT_ID="489994096722"
+        AWS_ACCOUNT_ID="id"
         AWS_DEFAULT_REGION="us-west-2" 
         IMAGE_REPO_NAME="nodjsrobo"
-        IMAGE_TAG="$BUILD_NUMBER"
+        IMAGE_TAG= sh(returnStdout: true, script: "git rev-parse --short=10 HEAD").trim()
         REPOSITORY_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}"
-        DNS = "abtesting1.groveops.net"
+        DNS = "dns"
     }
     stages {
         stage('Checkout') {
@@ -51,7 +51,7 @@ def namespaceExists(namespace) {
 
 def deployToNamespace(namespace) {
     echo "Deploying to ${namespace} namespace..."
-    withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://D689094BBABE173F5873CC1175E862B6.sk1.us-west-2.eks.amazonaws.com']) {
+    withKubeConfig([credentialsId: 'k8s', serverUrl: 'serverurl']) {
         sh """
             ls
             echo ${namespace}
@@ -63,6 +63,7 @@ def deployToNamespace(namespace) {
             sed -i "s@Image@${REPOSITORY_URI}:${IMAGE_TAG}@g" blue_green_deployment/values.yaml
             cat  blue_green_deployment/values.yaml
             helm install bluedeployment blue_green_deployment -n ${namespace}
+            
 
         """
     }
@@ -80,7 +81,7 @@ def deployToNamespace(namespace) {
     def oppositeNamespace = (namespace == "blue") ? "green" : "blue"
     if (namespaceExists(oppositeNamespace)) {
         echo "Decommissioning old deployment in ${oppositeNamespace} namespace..."
-        withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://D689094BBABE173F5873CC1175E862B6.sk1.us-west-2.eks.amazonaws.com']) {
+        withKubeConfig([credentialsId: 'k8s', serverUrl: 'serverurl]) {
 
             sh "helm uninstall bluedeployment -n  ${oppositeNamespace} "
             sh "kubectl delete namespace ${oppositeNamespace}"
