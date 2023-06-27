@@ -1,5 +1,13 @@
 pipeline {
     agent any
+        environment {
+        AWS_ACCOUNT_ID="489994096722"
+        AWS_DEFAULT_REGION="us-west-2" 
+        IMAGE_REPO_NAME="nodjsrobo"
+        IMAGE_TAG="$BUILD_NUMBER"
+        REPOSITORY_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}"
+        DNS = "abtesting1.groveops.net"
+    }
     stages {
         stage('Checkout') {
             steps {
@@ -7,7 +15,21 @@ pipeline {
             }
         }
 
-
+        stage('Building and push') {
+        
+            steps{
+            script {
+            
+            sh "aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+            dockerImage = docker.build "${IMAGE_REPO_NAME}:${IMAGE_TAG}"
+            sh '''
+            docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${REPOSITORY_URI}:${IMAGE_TAG}
+            export image_nmtag=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}:${IMAGE_TAG}
+            docker push $image_nmtag
+            '''
+        }
+        }
+        }
 
         stage('Deploy Blue or Green') {
             steps {
@@ -29,41 +51,25 @@ def namespaceExists(namespace) {
 
 def deployToNamespace(namespace) {
     echo "Deploying to ${namespace} namespace..."
-    withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://43A1B4A8DA84FDE6E80B1B6D93764235.gr7.us-west-2.eks.amazonaws.com']) {
-        sh """#!/bin/bash
+    withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://D689094BBABE173F5873CC1175E862B6.sk1.us-west-2.eks.amazonaws.com']) {
+        sh """
+            ls
             echo ${namespace}
-            kubectl create namespace ${namespace}
-            
             names=${namespace}
-
-            if [[ \$names == "green" ]]
-            then
-               imagev="kmgoddard/bgapp:1.5"
-            else
-              imagev="kmgoddard/bgapp:1.4"
-            fi
-            echo "after execution"
-            echo "\$imagev"
-
-            sed -i "s@Image@\$imagev@g" blue_green_deployment/values.yaml
-            sed -i "s@Namespace@\$names@g" blue_green_deployment/values.yaml
+            kubectl create namespace ${namespace}
+            echo "updating values in values.yaml"
+            sed -i "s/Namespace/${namespace}/g" blue_green_deployment/values.yaml
+            sed -i "s/HOSTNAME/${DNS}/g" blue_green_deployment/values.yaml
+            sed -i "s@Image@${REPOSITORY_URI}:${IMAGE_TAG}@g" blue_green_deployment/values.yaml
             cat  blue_green_deployment/values.yaml
-
             helm install bluedeployment blue_green_deployment -n ${namespace}
-            sleep 30s
-            
 
-            
-            echo "after execution"
-            
         """
     }
+    
 
     withAWS(credentials: 'aws', region: 'us-west-2') {
         sh """
-            chmod +x before_${namespace}_updatedns.sh
-            ./before_${namespace}_updatedns.sh
-            sleep 100
             chmod +x after_${namespace}_updatedns.sh
             ./after_${namespace}_updatedns.sh
         """
@@ -74,7 +80,7 @@ def deployToNamespace(namespace) {
     def oppositeNamespace = (namespace == "blue") ? "green" : "blue"
     if (namespaceExists(oppositeNamespace)) {
         echo "Decommissioning old deployment in ${oppositeNamespace} namespace..."
-        withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://43A1B4A8DA84FDE6E80B1B6D93764235.gr7.us-west-2.eks.amazonaws.com']) {
+        withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://D689094BBABE173F5873CC1175E862B6.sk1.us-west-2.eks.amazonaws.com']) {
 
             sh "helm uninstall bluedeployment -n  ${oppositeNamespace} "
             sh "kubectl delete namespace ${oppositeNamespace}"
