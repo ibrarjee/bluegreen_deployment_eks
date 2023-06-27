@@ -6,7 +6,7 @@ namespace: Namespace
 image:
   repository: Image
   pullPolicy: IfNotPresent
-  containers_name : hello-world-blue
+  containers_name : frontend
   containerPort : 80
   
   # Overrides the image tag whose default is the chart appVersion.
@@ -14,7 +14,7 @@ image:
 service:
   type: ClusterIP
   port: 80
-  name: hello-world-service
+  name: frontend-service
   targetPort : 80
   protocol : TCP
   

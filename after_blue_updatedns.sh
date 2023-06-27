@@ -4,7 +4,7 @@
 hosted_zone_id="Z074130239BXW7W2J0TY9"
 record_name="bluegreen.groveops.net"
 namespace="blue"
-ingress_name="frontend_ingress"
+ingress_name="frontend-ingress"
 
 # Get the external IP address of the Kubernetes service
 external_address=$(kubectl get ingress -n "$namespace" "$ingress_name" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
