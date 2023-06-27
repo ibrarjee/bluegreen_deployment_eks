@@ -12,6 +12,7 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip 
     alb.ingress.kubernetes.io/target-https-ports: "443"
     # alb.ingress.kubernetes.io/group.name: staging-lb 
+
   # Health Check Settings
     alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
     alb.ingress.kubernetes.io/healthcheck-port: traffic-port
@@ -21,6 +22,7 @@ metadata:
     alb.ingress.kubernetes.io/healthy-threshold-count: '2'
     alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
     alb.ingress.kubernetes.io/healthcheck-path: /
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.ingress.hostname}}
 spec:
   rules:
     - http:

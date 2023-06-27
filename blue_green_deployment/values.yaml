@@ -1,10 +1,10 @@
 
 replicaCount: 2
 
-namespace: Namespace
+namespace: green
 
 image:
-  repository: Image
+  repository: kmgoddard/bgapp:1.5
   pullPolicy: IfNotPresent
   containers_name : hello-world-blue
   containerPort : 80
@@ -21,6 +21,7 @@ service:
 
 ingress: 
   name : hello-from-ingress
+  hostname : HOSTNAME
   # annotations: {}
   # kubernetes.io/ingress.class: nginx
   # kubernetes.io/tls-acme: "true"

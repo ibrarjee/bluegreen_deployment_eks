@@ -7,86 +7,7 @@ pipeline {
             }
         }
 
-        stage('Deploy Blue or Green') {
-            steps {
-                script {
-                    if (namespaceExists("green")) {
-                        deployToNamespace("blue")
-                    } else {
-                        deployToNamespace("green")
-                    }
-                }
-            }
-        }
-    }
-}
 
-def namespaceExists(namespace) {
-    return sh(script: "kubectl get namespaces -o json | jq '.items[].metadata.name' | grep -q ${namespace}", returnStatus: true) == 0
-}
-
-def deployToNamespace(namespace) {
-    echo "Deploying to ${namespace} namespace..."
-    withKubeConfig([credentialsId: 'k8s', serverUrl: ' https://43A1B4A8DA84FDE6E80B1B6D93764235.gr7.us-west-2.eks.amazonaws.com']) {
-        sh """
-        kubectl create namespace ${namespace}
-
-        image="kmgoddard/bgapp:1.5"
-
-        # Check the condition
-        if [ "$1" = "green" ]; then
-            image="kmgoddard/bgapp:1.4"
-        fi
-
-        # Replace the word with the new value
-        sed -i "s/Image/$image/g" blue_green_deployment/values.yaml
-
-        sed -i "s/namespace/${namespace}/g" blue_green_deployment/values.yaml
-
-         helm install bluedeployment blue_green_deployment 
-
-
-
-        """
-    }
-
-    withAWS(credentials: 'aws', region: 'us-west-2') {
-            sh """
-             chmod +x before_${namespace}_updatedns.sh
-             ./before_${namespace}_updatedns.sh  
-             sleep 100
-             chmod +x after_${namespace}_updatedns.sh 
-             ./after_${namespace}_updatedns.sh
-             """
-    }
-
-    def oppositeNamespace = (namespace == "blue") ? "green" : "blue"
-    if (namespaceExists(oppositeNamespace)) {
-        echo "Decommissioning old deployment in ${oppositeNamespace} namespace..."
-        withKubeConfig([credentialsId: 'k8s', serverUrl: ' https://43A1B4A8DA84FDE6E80B1B6D93764235.gr7.us-west-2.eks.amazonaws.com']) {
-             kubectl delete namespace ${oppositeNamespace}"
-        }
-    } else {
-        echo "Old deployment in ${oppositeNamespace} namespace not found, skipping decommissioning..."
-    }
-}
-
-
-
-
-##################################################################################################################
-##################################################################################################################
-##################################################################################################################
-
-
-pipeline {
-    agent any
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/ibrarjee/bluegreen_deployment_eks.git']]])
-            }
-        }
 
         stage('Deploy Blue or Green') {
             steps {
@@ -109,22 +30,32 @@ def namespaceExists(namespace) {
 def deployToNamespace(namespace) {
     echo "Deploying to ${namespace} namespace..."
     withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://43A1B4A8DA84FDE6E80B1B6D93764235.gr7.us-west-2.eks.amazonaws.com']) {
-        sh """
+        sh """#!/bin/bash
+            echo ${namespace}
             kubectl create namespace ${namespace}
+            
+            names=${namespace}
 
-            // Define the image variable based on the namespace
-            def image
-            if (${namespace} == "green") {
-                image = "kmgoddard/bgapp:1.4"
-            } else {
-                image = "kmgoddard/bgapp:1.5"
-            }
+            if [[ \$names == "green" ]]
+            then
+               imagev="kmgoddard/bgapp:1.5"
+            else
+              imagev="kmgoddard/bgapp:1.4"
+            fi
+            echo "after execution"
+            echo "\$imagev"
 
-            // Replace the word with the new value
-            sed -i "s/Image/\${image}/g" blue_green_deployment/values.yaml
-            sed -i "s/namespace/${namespace}/g" blue_green_deployment/values.yaml
+            sed -i "s@Image@\$imagev@g" blue_green_deployment/values.yaml
+            sed -i "s@Namespace@\$names@g" blue_green_deployment/values.yaml
+            cat  blue_green_deployment/values.yaml
 
-            helm install bluedeployment blue_green_deployment
+            helm install bluedeployment blue_green_deployment -n ${namespace}
+            sleep 30s
+            
+
+            
+            echo "after execution"
+            
         """
     }
 
@@ -137,92 +68,15 @@ def deployToNamespace(namespace) {
             ./after_${namespace}_updatedns.sh
         """
     }
+    
 
+    
     def oppositeNamespace = (namespace == "blue") ? "green" : "blue"
     if (namespaceExists(oppositeNamespace)) {
         echo "Decommissioning old deployment in ${oppositeNamespace} namespace..."
         withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://43A1B4A8DA84FDE6E80B1B6D93764235.gr7.us-west-2.eks.amazonaws.com']) {
-            sh "kubectl delete namespace ${oppositeNamespace}"
-        }
-    } else {
-        echo "Old deployment in ${oppositeNamespace} namespace not found, skipping decommissioning..."
-    }
-}
 
-
-
-
-
-
-##################################################################################
-###################################################################################
-
-pipeline {
-    agent any
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '', url: 'https://github.com/ibrarjee/bluegreen_deployment_eks.git']]])
-            }
-        }
-
-        stage('Deploy Blue or Green') {
-            steps {
-                script {
-                    if (namespaceExists("green")) {
-                        deployToNamespace("blue")
-                    } else {
-                        deployToNamespace("green")
-                    }
-                }
-            }
-        }
-    }
-}
-
-def namespaceExists(namespace) {
-    return sh(script: "kubectl get namespaces -o json | jq '.items[].metadata.name' | grep -q ${namespace}", returnStatus: true) == 0
-}
-
-def deployToNamespace(namespace) {
-    echo "Deploying to ${namespace} namespace..."
-    withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://43A1B4A8DA84FDE6E80B1B6D93764235.gr7.us-west-2.eks.amazonaws.com']) {
-        sh """
-            echo ${namespace}
-            sleep 5m
-            // kubectl create namespace ${namespace}
-
-            // Define the image variable based on the namespace
-            // def image
-            //     if ($namespace == "green") {
-            //         image = "kmgoddard/bgapp:1.4"
-            //     } else {
-            //         image = "kmgoddard/bgapp:1.4"
-            //     }
-            //     echo $image
-            
-            // Replace the word with the new value
-            // sed -i "s/Image/\${image}/g" blue_green_deployment/values.yaml
-            // sed -i "s/namespace/${namespace}/g" blue_green_deployment/values.yaml
-
-            // helm install bluedeployment blue_green_deployment
-        """
-    }
-
-    // withAWS(credentials: 'aws', region: 'us-west-2') {
-    //     sh """
-    //         chmod +x before_${namespace}_updatedns.sh
-    //         ./before_${namespace}_updatedns.sh
-    //         sleep 100
-    //         chmod +x after_${namespace}_updatedns.sh
-    //         ./after_${namespace}_updatedns.sh
-    //     """
-    // }
-
-    def oppositeNamespace = (namespace == "blue") ? "green" : "blue"
-    if (namespaceExists(oppositeNamespace)) {
-        echo "Decommissioning old deployment in ${oppositeNamespace} namespace..."
-        withKubeConfig([credentialsId: 'k8s', serverUrl: 'https://43A1B4A8DA84FDE6E80B1B6D93764235.gr7.us-west-2.eks.amazonaws.com']) {
+            sh "helm uninstall bluedeployment -n  ${oppositeNamespace} "
             sh "kubectl delete namespace ${oppositeNamespace}"
         }
     } else {
