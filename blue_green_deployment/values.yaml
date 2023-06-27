@@ -20,7 +20,7 @@ service:
   
 
 ingress: 
-  name : frontend_ingress
+  name : frontend-ingress
   hostname : HOSTNAME
   # annotations: {}
   # kubernetes.io/ingress.class: nginx
